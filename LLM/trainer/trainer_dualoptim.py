@@ -64,6 +64,9 @@ class CustomTrainerForgettingAlternate(Trainer):
         self.base_beta1 = base_beta1
         self.base_beta2 = base_beta2
 
+        self.untar_to_tar_milestone = None
+
+
         super(CustomTrainerForgettingAlternate, self).__init__(*args, **kwargs)
 
         # Prepare the reference model with DeepSpeed
@@ -147,7 +150,6 @@ class CustomTrainerForgettingAlternate(Trainer):
                 lr_ratio_1=self.forget_lr_ratio,
                 switch_freq_1=self.forget_freq,
                 switch_freq_2=self.retain_freq,
-                reinit_step=self.untar_to_tar_milestone,
             )
             import bitsandbytes
 

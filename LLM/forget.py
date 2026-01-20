@@ -25,7 +25,6 @@ from utils import get_model_identifiers_from_yaml, set_random_seed
 
 warnings.filterwarnings("ignore")
 
-
 def find_all_linear_names(model):
     cls = torch.nn.Linear
     lora_module_names = set()
@@ -297,13 +296,26 @@ def main(cfg):
             model = get_peft_model(model, peft_config)
 
     # load reference model
+
+
     reference_model = AutoModelForCausalLM.from_pretrained(
         reference_model_path,
         config=config,
         attn_implementation="flash_attention_2",
         torch_dtype=torch.bfloat16,
     )
-    reference_model = reference_model.eval()
+    reference_model.eval()
+
+# =============
+    if torch.distributed.is_initialized():
+        local_rank = int(os.environ["LOCAL_RANK"])
+        reference_model = reference_model.to(f"cuda:{local_rank}")
+    else:
+        reference_model = reference_model.to("cuda")
+# =================================
+
+
+
 
     if cfg.alternate:
         trainer = CustomTrainerForgettingAlternate(
@@ -365,10 +377,15 @@ def main(cfg):
                 )
             else:
                 # single
+                
+                
                 if cfg.save_checkpoint:
+                    dst = os.path.join(curr_save_dir, "checkpoint-last")
+                    if os.path.exists(dst):
+                        shutil.rmtree(dst)
                     shutil.copytree(
                         os.path.join(curr_save_dir, f"checkpoint-{max_steps}"),
-                        os.path.join(curr_save_dir, f"checkpoint-last"),
+                        dst,
                     )
 
         if os.path.exists(last_checkpoint_dir) and not cfg.save_checkpoint:
