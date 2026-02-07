@@ -138,7 +138,6 @@ class CustomTrainerForgettingAlternate(Trainer):
                 lr_ratio_1=self.forget_lr_ratio,
                 switch_freq_1=self.forget_freq,
                 switch_freq_2=self.retain_freq,
-                reinit_step=self.untar_to_tar_milestone,
             )
         elif self.optim_cfg == "dual_adam_8bit":
             print("8bit DualAdam > Using forget ratio: ", self.forget_lr_ratio)

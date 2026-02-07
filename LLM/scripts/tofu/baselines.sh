@@ -5,11 +5,11 @@ MASTER_PORT=$((RANDOM % 50001 + 10000))
 
 forget_losses=(
     # GA+GD
-    DPO+GD
+    # DPO+GD
     # IDK+GD
     # DPO+GD
     # GA+KL
-    # NPO+KL
+    NPO+KL
     # IDK+KL
     # DPO+KL
 )
@@ -49,7 +49,7 @@ for forget_loss in ${forget_losses[@]}; do
 lr=$lr split=$split forget_loss=$forget_loss num_epochs=$num_epochs \
 mask=$mask fix_ref_model=$fix_ref_model save_root=$save_root save_checkpoint=$save_checkpoint"
 
-            CUDA_VISIBLE_DEVICES=2,3 torchrun --nproc_per_node=2 --master_port=$MASTER_PORT \
+            CUDA_VISIBLE_DEVICES=1 torchrun --nproc_per_node=1 --master_port=$MASTER_PORT \
                 forget.py \
                 --config-name=phi1-5_tofu.yaml \
                 task_id=$task_id \
@@ -79,7 +79,7 @@ for forget_loss in ${forget_losses[@]}; do
 lr=$lr split=$split forget_loss=$forget_loss num_epochs=$num_epochs \
 mask=$mask fix_ref_model=$fix_ref_model save_root=$save_root save_checkpoint=$save_checkpoint"
 
-            CUDA_VISIBLE_DEVICES=2,3 torchrun --nproc_per_node=2 --master_port=$MASTER_PORT \
+            CUDA_VISIBLE_DEVICES=0,2 torchrun --nproc_per_node=2 --master_port=$MASTER_PORT \
                 forget.py \
                 --config-name=phi1-5_tofu.yaml \
                 task_id=$task_id \
@@ -109,7 +109,7 @@ for forget_loss in ${forget_losses[@]}; do
 lr=$lr split=$split forget_loss=$forget_loss num_epochs=$num_epochs \
 mask=$mask fix_ref_model=$fix_ref_model save_root=$save_root save_checkpoint=$save_checkpoint"
 
-            CUDA_VISIBLE_DEVICES=2,3 torchrun --nproc_per_node=2 --master_port=$MASTER_PORT \
+            CUDA_VISIBLE_DEVICES=0,2 torchrun --nproc_per_node=2 --master_port=$MASTER_PORT \
                 forget.py \
                 --config-name=phi1-5_tofu.yaml \
                 task_id=$task_id \
