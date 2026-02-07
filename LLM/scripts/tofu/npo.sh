@@ -14,7 +14,6 @@ forget_losses=(
     DPO+GD
 )
 
-# Standard TOFU benchmark task
 task_list=(1)
 export TASK_LIST=$(IFS=,; echo "${task_list[*]}")
 
@@ -35,10 +34,30 @@ num_epochs=5
 save_steps=steps_per_epoch
 eval_steps=(last)
 
-# ----------------
-# GPU config (single card)
-# ----------------
+# ================================
+# GPU config (AUTO)
+# ================================
+# Examples:
+#   GPU_ID=1        -> single GPU
+#   GPU_ID=1,2      -> 2 GPUs (distributed)
+#   GPU_ID=0,1,2,3  -> 4 GPUs (distributed)
+
 GPU_ID=1
+
+IFS=',' read -ra GPU_ARRAY <<< "$GPU_ID"
+NUM_GPUS=${#GPU_ARRAY[@]}
+
+echo "Using GPUs: $GPU_ID"
+echo "Number of GPUs: $NUM_GPUS"
+
+# Decide launcher
+if [ "$NUM_GPUS" -gt 1 ]; then
+    LAUNCHER="torchrun --nproc_per_node=$NUM_GPUS --master_port=$MASTER_PORT"
+    echo "[Mode] Distributed training (torchrun)"
+else
+    LAUNCHER="python"
+    echo "[Mode] Single-GPU training (python)"
+fi
 
 # ================================
 # split = forget01 (ONLY)
@@ -67,7 +86,7 @@ save_checkpoint=$save_checkpoint"
             echo "=============================================="
 
             CUDA_VISIBLE_DEVICES=$GPU_ID \
-            python forget.py \
+            $LAUNCHER forget.py \
             --config-name=phi1-5_tofu.yaml \
             task_id=$task_id \
             save_steps=$save_steps \
@@ -79,7 +98,7 @@ save_checkpoint=$save_checkpoint"
 
             for step in ${eval_steps[@]}; do
                 CUDA_VISIBLE_DEVICES=$GPU_ID \
-                python eval.py \
+                $LAUNCHER eval.py \
                 --config-name=phi1-5_tofu.yaml \
                 task_id=$task_id \
                 eval_unlearn_step=$step \
@@ -88,4 +107,3 @@ save_checkpoint=$save_checkpoint"
         done
     done
 done
-
