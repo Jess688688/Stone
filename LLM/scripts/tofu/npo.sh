@@ -1,24 +1,21 @@
-
 #!/usr/bin/env bash
+
+# ================================
+# Basic setup
+# ================================
 
 MASTER_PORT=$((RANDOM % 50001 + 10000))
 
+# ----------------
+# Experiment config
+# ----------------
+
 forget_losses=(
-    # GA+GD
-    # DPO+GD
-    # IDK+GD
-    # DPO+GD
-    # GA+KL
-    NPO+KL
-    # IDK+KL
-    # DPO+KL
+    DPO+GD
 )
 
-# You can specify any forget task from 1 to 10
-# the standard TOFU benchmark is task 1
+# Standard TOFU benchmark task
 task_list=(1)
-
-# pass to python script
 export TASK_LIST=$(IFS=,; echo "${task_list[*]}")
 
 learning_rates=(
@@ -38,32 +35,57 @@ num_epochs=5
 save_steps=steps_per_epoch
 eval_steps=(last)
 
-########################################
-# split = forget01
-########################################
+# ----------------
+# GPU config (single card)
+# ----------------
+GPU_ID=1
+
+# ================================
+# split = forget01 (ONLY)
+# ================================
+
 split=forget01
+
 for forget_loss in ${forget_losses[@]}; do
     for lr in ${learning_rates[@]}; do
         for task_id in ${task_list[@]}; do
-            COMMON="use_LoRA=$use_LoRA forget_coeff=$forget_coeff regularization_coeff=$regularization_coeff \
-lr=$lr split=$split forget_loss=$forget_loss num_epochs=$num_epochs \
-mask=$mask fix_ref_model=$fix_ref_model save_root=$save_root save_checkpoint=$save_checkpoint"
 
-            CUDA_VISIBLE_DEVICES=1 torchrun --nproc_per_node=1 --master_port=$MASTER_PORT \
-                forget.py \
-                --config-name=phi1-5_tofu.yaml \
-                task_id=$task_id \
-                save_steps=$save_steps \
-                $COMMON
+            COMMON="use_LoRA=$use_LoRA \
+forget_coeff=$forget_coeff \
+regularization_coeff=$regularization_coeff \
+lr=$lr \
+split=$split \
+forget_loss=$forget_loss \
+num_epochs=$num_epochs \
+mask=$mask \
+fix_ref_model=$fix_ref_model \
+save_root=$save_root \
+save_checkpoint=$save_checkpoint"
+
+            echo "=============================================="
+            echo "TRAIN | split=$split | loss=$forget_loss | lr=$lr"
+            echo "=============================================="
+
+            CUDA_VISIBLE_DEVICES=$GPU_ID \
+            python forget.py \
+            --config-name=phi1-5_tofu.yaml \
+            task_id=$task_id \
+            save_steps=$save_steps \
+            $COMMON
+
+            echo "----------------------------------------------"
+            echo "EVAL  | split=$split"
+            echo "----------------------------------------------"
 
             for step in ${eval_steps[@]}; do
-                CUDA_VISIBLE_DEVICES=1 torchrun --nproc_per_node=1 --master_port=$MASTER_PORT \
-                    eval.py \
-                    --config-name=phi1-5_tofu.yaml \
-                    task_id=$task_id \
-                    eval_unlearn_step=$step \
-                    $COMMON
+                CUDA_VISIBLE_DEVICES=$GPU_ID \
+                python eval.py \
+                --config-name=phi1-5_tofu.yaml \
+                task_id=$task_id \
+                eval_unlearn_step=$step \
+                $COMMON
             done
         done
     done
 done
+

@@ -17,12 +17,22 @@ warnings.filterwarnings("ignore")
 
 
 def setup_distributed():
-    """Initialize torch.distributed for eval."""
-    if dist.is_available() and not dist.is_initialized():
+    # ① 已经被外部初始化（Accelerate / Trainer）
+    if dist.is_available() and dist.is_initialized():
+        local_rank = dist.get_rank()
+        torch.cuda.set_device(local_rank)
+        return local_rank
+
+    # ② torchrun / 分布式环境
+    if "RANK" in os.environ and "WORLD_SIZE" in os.environ:
         dist.init_process_group(backend="nccl")
-    local_rank = int(os.environ["LOCAL_RANK"])
-    torch.cuda.set_device(local_rank)
-    return local_rank
+        local_rank = int(os.environ.get("LOCAL_RANK", 0))
+        torch.cuda.set_device(local_rank)
+        return local_rank
+
+    # ③ 单卡 / 非分布式
+    return 0
+
 
 
 def cleanup_distributed():

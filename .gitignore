@@ -1,2 +1,5 @@
 __pycache__/
 .idea/
+LLM/log2
+LLM/outputs/
+LLM/results/

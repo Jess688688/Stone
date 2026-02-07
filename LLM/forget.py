@@ -38,7 +38,7 @@ def find_all_linear_names(model):
 
 
 def get_task_data(data_path, split, task_id, unlearned_tasks, curr_save_dir):
-    local_rank = int(os.environ["LOCAL_RANK"])
+    local_rank = int(os.environ.get("LOCAL_RANK", 0))
     forget_data = datasets.load_dataset(
         "json", data_files=os.path.join(data_path, split + ".json"), split="train"
     )
@@ -85,7 +85,8 @@ def get_task_data(data_path, split, task_id, unlearned_tasks, curr_save_dir):
 @hydra.main(version_base=None, config_path="config", config_name="tofu")
 def main(cfg):
     num_devices = int(os.environ.get("WORLD_SIZE", 1))
-
+    
+    local_rank = 0  
     if os.environ.get("LOCAL_RANK") is not None:
         local_rank = int(os.environ.get("LOCAL_RANK", "0"))
         device_map = {"": local_rank}
@@ -217,6 +218,8 @@ def main(cfg):
         # ds_config = "config/ds_config/llama2.json"
         ds_config = "config/ds_config/zero2.json"
 
+    
+    is_distributed = ("RANK" in os.environ and "WORLD_SIZE" in os.environ and int(os.environ["WORLD_SIZE"]) > 1)
     training_args = transformers.TrainingArguments(
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
@@ -228,12 +231,12 @@ def main(cfg):
         bf16_full_eval=True,
         output_dir=curr_save_dir,
         # deepspeed=ds_config,
-        fsdp="shard_grad_op",
-        fsdp_config={
+        fsdp=("shard_grad_op" if is_distributed else ""),
+        fsdp_config=({
             # "min_num_params": 1e12,
             # "activation_checkpointing": True,
             "backward_prefetch": "backward_pre"
-        },
+        } if is_distributed else {}),
         save_steps=save_steps,
         save_only_model=True,
         ddp_find_unused_parameters=False,
