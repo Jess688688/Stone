@@ -317,6 +317,14 @@ def main(cfg):
         reference_model = reference_model.to("cuda")
 # =================================
 
+# Ensure the main model is also moved to GPU to avoid FlashAttention/FSDP
+# issues when calling the model in loss functions before Trainer wraps it.
+    if torch.distributed.is_initialized():
+        local_rank = int(os.environ.get("LOCAL_RANK", 0))
+        model = model.to(f"cuda:{local_rank}")
+    else:
+        model = model.to("cuda")
+
 
 
 
