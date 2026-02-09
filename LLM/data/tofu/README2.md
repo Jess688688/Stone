@@ -11,8 +11,14 @@ We define three forget sets corresponding to different forgetting ratios:
 
 For each forget set, the remaining samples form the **retain set**.
 
+
+### Example: Constructing `forget01`
+
+- The file `forget01.json` contains candidate samples for the 1% forget set.
+- To construct the complete `forget01` forget set (40 samples), select entries with `task_id = 1, 2, ..., 10` from `forget01.json` and get 40 samples as the forget set.
+- The remaining samples of the full dataset constitute the retain set.
+
+
 ## Data Location
 
 Dataset files are located under:  
-
-
